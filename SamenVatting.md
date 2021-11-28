@@ -1,115 +1,183 @@
 # Relational Databases & Datawarehousing
-|Overview|
-|:---|
-|[Hoofdstuk 1: Sql Basic's](#sql-basic-concepts-revisited)|
 
+| Inhoud                                                                   |
+| :----------------------------------------------------------------------- |
+| [0. praktische info](#praktische-info)                                   |
+| [1. SQL review](#SQL-review)                                             |
+| [2. SQL Advanced](#SQL-advanced)                                         |
+| [3. Window functions](#window-functions)                                 |
+| [4. DB Programming](#DB-programming)                                     |
+| [5. Indexen](#indexen)                                                   |
+| [6. Basics of Transaction Management](#basics-of-transaction-management) |
+| [7a. DWH + BI](#DWH-BI)                                                  |
+| [7b. AdventureWorks Intro - Starschema - Filling](#AdventureWorks)       |
 
+# praktische info
 
-# SQL Basic concepts revisited
+# SQL review
 
-| Overview | |
-|:----|:----|
-|[Select, GROUP BY, Statistical functions](#select)|
-|[Join, Union, Subquerry's,...](#)|
-|[Modifying Data: insert, update, delete](#)|
+## Data Definition Language | DDL
 
-## Select
-<ul>
-<li>Consulting table</li>
+- CREATE
+- ALTER
+- DROP
 
+## Data Manipulation Language | DML
 
+- SELECT
+- INSERT
+- UPDATE
+- DELETE
 
-|Task | Querry|
-|:----|:----|
-|Specefie wich column u want | ```SELECT```| 
-|Table Name|```FROM```|
-|Filter condition on individual lines in the output|```WHERE```|
-|Grouping of data | ```GROUP BY ```|
-|Filter condition on groups|```HAVING```|
-|Sorting|```ORDER BY```|
-<li>WHERE</li>
+## Data Control Language | DCL
 
+- GRANT
+- REVOKE
+- DENY
 
-|Task| Querry|
-|:----|:----|
-|Comparison operators| ```SELECT ... FROM ... WHERE ... >,<, =, >=,<=,<>```|
-|Wild cards | ``` WHERE ... LIKE [wildcard]```|
-|Logical Operators| ```WHERE ... AND,OR,NOT ...```|
-|Values in an interval | ```WHERE ... (NOT) BETWEEN ... AND ...```|
-|List of values | ```sql WHERE ... IN/ NOT IN ...```|
-|Test for unknown/ empty values|```WHERE ... IS (NOT) NULL```|
+<br>
 
-<li>Formating Results</li>
+| Wildcard | Description                           |
+| -------- | ------------------------------------- |
+| %        | 1 or more characters                  |
+| \_       | 1 character                           |
+| []       | 1 char in a specified range           |
+| [^]      | every char not in the specified range |
 
-|Task| Querry|
-|:----|:----|
-|Sorting of data (alphabeticly)| ```ORDER BY ...```|
+<br>
 
-<li>Select data conversion</li>
+| Clause   | Description                                        |
+| -------- | -------------------------------------------------- |
+| SELECT   | Specifies the colums to show up in the output      |
+| DISTINCT | filters out the duplicates                         |
+| FROM     | Table names                                        |
+| WHERE    | Filter condition on individual lines in the output |
+| GROUP BY | Grouping of data                                   |
+| HAVING   | Filter conditions on groups                        |
+| ORDER BY | Sorting                                            |
 
-|Task| Querry|
-|:----|:----|
-|Convert example| ```SELECT CONVERT(VARCHAR,GETDATE(), 106) AS Today```|
+<br>
 
-<li>Case function</li>
-Simple Case Function example
+## WHERE
 
-```sql
-SELECT City, Region, 
-Case Region 
-    WHEN 'OR' THEN 'West'
-    WHEN 'MI' THEN 'North'
-    ELSE 'Elsewhere'
-END AS RegionElaborated
-FROM Suppliers
-``` 
+> =, >, >=, <, <=, <>  
+> OR, AND, NOT  
+> IN, NOT IN  
+> IS NULL, IS NOT NULL  
+> wildcards
 
-<li>Extra's</li>
-<img src="IMG\DataTypeConversion.png" width="800"><br>
-<img src="IMG\StringFunctions.png" width="800"><br>
-<img src="IMG\DateAndTime.png" width="800"><br> 
-<img src="IMG\ArithmeticFunctions.png" width="800"><br> 
+<br>
 
-</ul>
+## ORDER BY
 
-## GROUP BY and statistical functions
+> DESC
 
+<br>
 
-### Statiscal Functions
-SQL has 5 Standard functions
-<ul>
+## Aliases
 
-<li>SUM(expression)</li>
-<li>AVG(expression): average</li>
-<li>MIN(expression): minimum</li>
-<li>MAX(expression): maximum</li>
-<li>COUNT(*|[DISTINCT] column name): count</li>
+> AS 'insert name here'
 
-</ul>
+<br>
 
-### SUM
-Returns sum of all mumeric values<br>
-```sql
-Select SUM(... ) as something
-FROM ...
+## Calculated results
+
+> +, -, /, \*
+
+<br>
+
+## Diverse functions
+
+| type   | function                                                       |
+| ------ | -------------------------------------------------------------- |
+| format | LTRIM, RTRIM, LEN, LEFT, RIGHT, SUBSTRING, REPLACE, CONCAT ... |
+| date   | DATEADD, DATEDIFF, DAY, MONTH, YEAR, GETDATE()                 |
+| math   | ABS, ROUND, FLOOR, CEILING, COS, SIN, AVG, SUM                 |
+| null   | ISNULL                                                         |
+| other  | TOP, STR                                                       |
+
+<br>
+
+## CASE
+
+```SQL
+CASE
+    WHEN condition1 THEN result1
+    WHEN condition2 THEN result2
+    WHEN conditionN THEN resultN
+    ELSE result
+END;
 ```
-### AVG
-Returns the average of NOT NULL numeric values in a column<br>
-```sql
-Select avg(...) as something
-FROM ... 
-```
-### Zelfde voor count en min max pretty self explainotory
 
-### GROUP BY
-<img src="IMG\GROUPBY.png" width="600"><br><br>
-Example: 
+<br>
 
-```sql
-SELECT CategoryID,COUNT(ProductID) As NumberOfProductsPerCategory
-FROM Products
-GROUP BY CategoryID
+| having vs where |                                                      |
+| --------------- | ---------------------------------------------------- |
+| having          | works on groups, conditions on aggregation functions |
+| where           | only works on indivdual rows                         |
+
+<br>
+
+## Consulting more then 1 table
+
+> JOIN
+>
+> - inner join
+> - outer join
+> - cross join
+>
+> UNIONS <br>
+> Subquery's
+>
+> - simple nested query's
+> - correlated query's
+> - operator EXISTS <br>
+>
+> SET operators <br>
+> Common table expressions
+
+<br>
+
+## JOIN
+
+![JOIN Scheme](IMG/JOINsceme.png)
+
+### INNER JOIN
+
+```SQL
+SELECT column_name(s)
+FROM table1
+INNER JOIN table2
+ON table1.column_name = table2.column_name;
 ```
-### EXTRA's met having
-<img src="IMG\Having.png" width="800"><br>
-<img src="IMG\Having2.png" width="800"><br>
+
+### OUTER JOIN
+
+```SQL
+-- left outer join
+SELECT column_name(s)
+FROM table1 x
+LEFT JOIN table2 y
+ON x.column_name = y.column_name;
+
+-- right outer join
+SELECT column_name(s)
+FROM table1 x
+RIGHT JOIN table2 y
+ON x.column_name = y.column_name;
+
+--- Full outer join
+SELECT column_name(s)
+FROM table1 x
+FULL OUTER JOIN table2 y
+ON x.column_name = y.column_name
+WHERE condition;
+```
+
+### CROSS JOIN
+
+```SQL
+SELECT column_name(s)
+FROM table1 x
+CROSS JOIN table2 y;
+```
