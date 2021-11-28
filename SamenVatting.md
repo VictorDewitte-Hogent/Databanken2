@@ -181,3 +181,80 @@ SELECT column_name(s)
 FROM table1 x
 CROSS JOIN table2 y;
 ```
+
+<br>
+
+# SQL advanced
+
+## Subqueries
+
+- outer level query -> the first SELECT. This is the main question.
+- inner level query -> the SELECT in the WHERE or HAVING clause. subquery.
+
+The subquery is:
+
+- always executed first
+- always between ()
+- Subqueries can be nested at > 1 level
+
+a subquery can return **one value** or **a list of values**
+
+<br>
+
+### Subquery returns a single value
+
+```SQL
+--- products that cost more then the average
+
+SELECT ProductID, ProductName, UnitPrice As MaxPrice
+FROM Products
+WHERE UnitPrice > (SELECT AVG (UnitPrice) FROM Products)
+
+
+--- Who is the youngest employee from the USA
+
+SELECT LastName, FirstName
+FROM Employees
+WHERE Country = 'USA'
+AND BirthDate = (SELECT MAX(Birthdate) FROM Employees WHERE Country = 'USA')
+```
+
+<br>
+
+### Subquery returns a single column
+
+```SQL
+--- Give all customers that have not placed an order yet
+
+SELECT *
+FROM customers
+WHERE CustormerID NOT IN (SELECT DISTINCT CustomerID FROM Orders)
+
+--- method via JOIN
+
+SELECT *
+FROM Customers c LEFT JOIN Orders o ON c.CustomerID = o.CustomerID
+WHERE o.CustomerID IS NULL
+
+```
+
+<br>
+
+### ANY and ALL keywords
+
+|     |                                                                           |
+| --- | ------------------------------------------------------------------------- |
+| ANY | greater than every value                                                  |
+| ALL | returns true if all values returned in the subquery satisfy the condition |
+
+<br>
+
+## Correlated subqueries
+
+- inner query depends on the information of the outer query.
+- subquery is executed for each row in the main query.
+- the order is from top to bottom, not from bottom to top as in a simple subquery.
+
+```SQL
+
+```
