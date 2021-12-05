@@ -687,3 +687,93 @@ WITH numbers(number) AS
     WHERE number<999)
 SELECT * FROM numbers
 ```
+## Window Functions
+
+### Window fucntions: business case
+
+- Often business managers want to compare current sales to previous sales
+- Window functions offer a solution to these kind of problems in a single, efficient SQL query
+
+### OVER Clause
+- Results of a SELECT are partitioned
+- Numbering, ordering and aggregate functions per partition
+- The `OVER` clauses creates partitions and ordering
+- The partition behaves as a window that shifts over the data
+- The OVER clause can be used with standard aggregate functions (sum, avg...) or specific window fucntions (rank, lag ...)
+
+- Example: Make an overview of the UnitInStock per Category and per Product
+```SQL
+SELECT CategoryID, ProductID, UnitInStock
+FROM Products
+ORDER BY CategoryID, ProductID
+```
+- Add an extra column to calculate the running total of Units per Category
+- Sol 1: Correlated subquery 8 (Inefficient as for each line the complete sum is recalculated)
+```SQL
+SELECT CategoryID, ProductID, UnitInStock,
+(SELECT SUM(UnitInStock)
+FROM Products
+WHERE CategoryID = p.CategoryID
+    AND ProductID <= p.ProductID) TotalUnitsInStockPerCategory
+From Products p
+ORDER BY CategoryID, ProductID
+```
+- Sol 2: `OVER` Clause (simpler + more efficient, The sum is calculated for each partition)
+```SQL
+SELECT CategoryID, ProductID, UnitsInStock,
+SUM(UnitsInStock) OVER (PARTITION BY CategoryID ORDER BY CategoryID, ProductsID) TotalUnitsInStockPerCategory
+FROM Products
+ORDER BY CategoryID, ProductID
+```
+
+### Window functions - RANGE
+- Real meaning of window functions: apply to a window that shifts over the result set
+- The previous query works with the default window: start of result set to current row
+```SQL
+SELECT CategoryID, ProductID, UnitsInStock,
+SUM(UnitsInStock) OVER (PARTITION BY CategoryID ORDER BY CategoryID, ProductsID
+RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) TotalUnitsInStockPerCategory
+FROM Products
+ORDER BY CategoryID, ProductID
+```
+- With `Range` you have three valid options:
+    - `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`
+    - `RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING`
+    - `RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`
+- Partition is optional, ORDER BY is mandatory
+
+
+ UNBOUNDED PRECEDING AND CURRENT ROW |  CURRENT ROW AND UNBOUNDED FOLLOWING |  UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+:-----------------------------------:|:------------------------------------:|:--------------------------------------------:
+<img src="IMG\RangePrecedingCurrentRow.png" width=200>|<img src="IMG\RangeCurrentFollowing.png" width=200>|<img src="IMG\RangePrecedingFollowing.png" width=200>
+
+### Window Functions - ROWS
+- When you use RANGE, the current row is compared to other rows and grouped based on the ORDER BY predicate.
+- This is not always disirable. You might actually want a physical offset.
+- In this scenario, you would specify ROWS instead of RANGE. This gives you Three options in addition to the three options enumerated previously:
+    - `ROWS BETWEEN N PRECEDING AND CURRENT ROW`
+    - `ROWS BETWEEN CURRENT ROW AND N FOLLOWING`
+    - `ROWS BETWEEN N PRECEDING AND N FOLLOWING`
+- Examples: Make an overview of the salary per employee and the average salary of this employee and the 2 employees preceding him
+```SQL
+SELECT EmployeeID, FirstName + ' ' + LastName AS FullName, Salary, AVG(Salary) 
+OVER (ORDER BY Salary DESC ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS AvgSalary2Preceding
+FROM Employees
+```
+<img src="IMG\RowsBetweenN.png">
+
+- Example2: Make an overview of the salary per employee and the average salary of this employee and the 2 employees following him
+```SQL
+SELECT EmployeeID, FirstName + ' ' + LastName AS FullName, Salary, AVG(Salary)
+OVER (ORDER BY Salary DESC ROWS BETWEEN CURRENT ROW AND 2 FOLLOWING) AS AvgSalary2Following
+FROM Employees
+```
+<img src="IMG\RowsBetweenCurrent.png">
+
+- Example3: Make an overview of the salary per employee and the avarage salary of this employee and the employee preceding and following him.
+```SQL
+SELECT EmployeeID, FirstName + ' ' + LastName AS FullName, Salary, AVG(Salary)
+OVER (ORDER BY Salary DESC ROWS BETWEEN 1 ROW AND 1 FOLLOWING) AS AvgSalary2Following
+FROM Employees
+```
+<img src="IMG\RowsBetweenNandFOllowing.png">
