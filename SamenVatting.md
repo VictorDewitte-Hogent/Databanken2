@@ -777,3 +777,19 @@ OVER (ORDER BY Salary DESC ROWS BETWEEN 1 ROW AND 1 FOLLOWING) AS AvgSalary2Foll
 FROM Employees
 ```
 <img src="IMG\RowsBetweenNandFOllowing.png">
+
+- ROW_NUMBER() nubmers the output of a result set. More specifically, returns the sequential number of a row within a partition of a result set, starting at 1 for the first row in each partition.
+
+- RANK() returns the rank of each row within the partition of a result set. The rank of a row is one plus the number of ranks that come before the row in question 
+
+- ROW_NUMBER and RANK are similar. ROW_NUMBER numbers all rows sequentially (for example 1, 2, 3, 4, 5). 
+
+- RANK provides the same numeric value for ties (for example 1, 2, 2, 4, 5).
+- DENSE_RANK() returns the rank of each row within the partition of a result set, with no gaps in the ranking values (for example 1, 2, 2, 3, 4). 
+- PCT_RANK() shows the ranking on a scale from 0 -1
+
+Example 1: Give ROW_NUMBER / RANK / DENSE_RANK / PERCENT_RANK for each employee based on his salary.
+<img src="IMG\GiveRow_Numer1.png" width=600>
+
+Example 2: Give ROW_NUMBER / RANK / DENSE_RANK / PERCENT_RANK per title for each employee based on his salary.
+<img src="IMG\GiveRow_Number2.png" width=600>
