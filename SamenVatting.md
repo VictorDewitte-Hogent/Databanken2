@@ -789,7 +789,23 @@ FROM Employees
 - PCT_RANK() shows the ranking on a scale from 0 -1
 
 Example 1: Give ROW_NUMBER / RANK / DENSE_RANK / PERCENT_RANK for each employee based on his salary.
+```SQL
+SELECT EmployeeID, FirstName + ' ' + LastName as 'Full Name', Title, Salary,
+ROW_NUMBER() OVER (ORDER_BY Salary DESC) as 'ROW_NUMBER',
+RANK() OVER (ORDER_BY Salary DESC) as 'Rank',
+DENSE_RANK() OVER (ORDER_BY Salary DESC) as 'DENSE_RANK',
+PERCENT_RANK() OVER (ORDER_BY Salary DESC) as 'PERCENT_RANK'
+FROM Employees
+```
 <img src="IMG\GiveRow_Numer1.png" width=600>
 
 Example 2: Give ROW_NUMBER / RANK / DENSE_RANK / PERCENT_RANK per title for each employee based on his salary.
+```SQL
+SELECT EmployeeID, FirstName + ' ' + LastName as 'Full Name', Title, Salary,
+ROW_NUMBER() OVER (PARTITION BY Title ORDER BY Salary DESC) as 'ROW_NUMBER',
+RANK() OVER (PARTITION BY Title ORDER BY Salary DESC) as 'Rank',
+DENSE_RANK() OVER (PARTITION BY Title ORDER BY Salary DESC) as 'DENSE_RANK',
+PERCENT_RANK() OVER (PARTITION BY Title ORDER BY Salary DESC) as 'PERCENT_RANK'
+FROM Employees
+```
 <img src="IMG\GiveRow_Number2.png" width=600>
