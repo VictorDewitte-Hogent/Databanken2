@@ -6,7 +6,7 @@
 | [1. SQL review](#SQL-review)                                             |
 | [2. SQL Advanced](#SQL-advanced)                                         |
 | [3. Window functions](#window-functions)                                 |
-| [4. DB Programming](#DB-programming)                                     |
+| [4. DB Programming](#Database-Programming)                                     |
 | [5. Indexen](#indexen)                                                   |
 | [6. Basics of Transaction Management](#basics-of-transaction-management) |
 | [7a. DWH + BI](#DWH-BI)                                                  |
@@ -809,3 +809,509 @@ PERCENT_RANK() OVER (PARTITION BY Title ORDER BY Salary DESC) as 'PERCENT_RANK'
 FROM Employees
 ```
 <img src="IMG\GiveRow_Number2.png" width=600>
+
+## LAG and LEAD
+
+- LAG refers to the previous line. This is short for LAG(...,1)
+- LAG(...,2) refers to the line before the previous line,...
+- LEAD refers to the next line. This is short for LEAD(...,1)
+- LEAD(...,2) refers to the line after the next line,...
+
+### LAG
+- Example: Calculate for each emploeyee the percentage difference between this employee and the employee preceding him.
+```sql
+SELECT EmployeeID, FirstName + ' '+ LastName, Salary, 
+FORMAT((Salary - LAG(Salary) OVER(ORDER BY Salary DESC)) / Salary, 'P') AS EarnLessThanPreceding
+FROM Employees
+```
+
+### LEAD
+- Example: Calculate for each employee the percentage difference between this employee and the employee following him
+```sql
+SELECT EmployeeID,FirstName +' '+LastName,Salary,
+FORMAT((Salary -LEAD(Salary)OVER (ORDERBYSalary DESC))/Salary,'P')As EarnsMoreThanFollowing
+FROM Employees
+```
+
+# Database Programming
+
+## SQL as complete language (PSM)
+
+### Persistent Stored Modules
+- Originally SQL was not a complete programming language
+    - But SQL could be embedded in a standard progreamming language
+- SQL/PSM, as a complete programming language
+    - variables, constants, datatypes
+    - operators
+    - Controle structures
+        - if, case, while, for...
+    - procedures, functions
+    - exception handling
+
+- PSM = stored procedures and stored functions
+- Examples
+    - SQL Server: Transact SQL
+    - Oracle: PL/ SQL
+    - DB2: SQL PL
+
+## Stored Procedures
+### Stored procedure
+A stored procedure is a named collection of SQL and control-of-flow commands (program) that is stored as a database object
+
+- What?
+    - Analogous to procedures/functions/methods in other languages
+    - Can be called from a program, trigger or stored procedure
+    - Is saved in the catalogue
+    - Accepts input and output parameters
+    - Returns status information about the correct or incorrect execution of the stored procedure
+    - Contains the tasks to be executed
+
+### Local variables
+- A variable name always starts with a @
+```SQL
+DECLARE @variable_name1 data_type [, @variable_name2 data_type ...]
+```
+- Assign a value to a variable
+```sql
+SET @variable_name = expression
+SELECT @varaible_name = column_specification
+```
+- SET and SELECT are equivalent, but set is ANSI standard
+- With select you can assign a value to several variables at once:
+```SQL
+DECLARE @maxQuantity SMALLINT, @maxUnitPrice MONEY, @minUnitPrice MONEY
+SET @maxQuantity = (SELECT MAX(quantity) FROM OrderDetails)
+SELECT @maxQuantity = MAX(quantity) FROM OrderDetails
+SELECT @maxUnitPrice = MAX(UnitPrice), @minUnitPrice = MIN(UnitPrce) FROM Products
+```
+- PRINT: SQL Server Management Studio shows a message in the message tab
+```SQL
+PRINT string_expression
+```
+- As an alternative you can also use SELECT
+```Sql
+DECLARE @maxQuantity SMALLINT
+SELECT @maxQuantity = MAX(quantity) FROM OrderDetails
+
+--RESULT in tab messages
+PRINT 'The maximum orderd quantity is ' + STR(@maxQuantity)
+
+--Result in tab result
+SELECT 'The maximum orderd quantity is ' + STR(@maxQuantity)
+```
+### Operators in Transact SQL
+- Arithmetic operators: 
+    - -,+,*,/,%(modulo)
+- Comparison operators:
+    - <,>,=,..., IS NULL, LIKE, BETWEEN, IN
+- Alphanumeric operators
+    - +(String concatenation)
+- Logic operators
+    - AND, OR, NOT
+
+### Control flow with Transact SQL
+```SQL
+CREATE PROCEDURE ShowFirstXEmployees @x INT,@missed INT OUTPUT
+AS
+DECLARE @empid INT,@fullname VARCHAR(100),@city NVARCHAR(30),@total int SET@empid =1
+SELECT@total =COUNT(*)
+FROM Employees
+--SET @total = (SELECT COUNT(*) FROM Employees)
+SET @missed =10 
+IF @x > @total
+    SELECT @x =COUNT(*)
+    FROM Employees 
+ELSE
+    SET @missed = @total - @x 
+WHILE @empid <= @x 
+BEGIN 
+    SELECT @fullname =firstname +' '+lastname, @city =city 
+    FROM Employees 
+    WHERE employeeid = @empid
+    PRINT'Full Name : '+@fullname
+    PRINT'City : '+@city
+    PRINT'-----------------------'
+    SET @empid = @empid +1
+END
+```
+
+```SQL
+--- Testcode
+DECLARE @NumberOfMissedEmployees INT
+SET @numberOfMissedEmployees = 0
+EXEC ShowFirstXEmployees 5, @numberOfMissedEmployees OUT -- don't forget out
+PRINT 'Number of missed employees: ' + STR(@numberOfMissedEmployees)
+```
+
+### Creation of SP
+```SQL
+CREATE PROCEDURe <proc_name> [parameter declaratie]
+AS
+<sql_statements>
+```
+- Create db object: via DDL instruction
+- Syntax control upon creation. The SP is only stored in the DB if it is syntactically correct
+
+```SQL
+CREATE PROCEDURE OrdersSelectAll
+AS
+SELECT * FROM Orders
+```
+
+OR 
+
+<img src="IMG\CreationOfSP.png" width=800>
+<br>
+
+### Procedural database objects
+- Initial behaviour of a stored procedure <br><img src="IMG\ProceduralDatabaseObjects.png" width=800>
+
+
+<br>
+
+### Changing and removing a SP
+```SQL
+ALTER PROCEDURE <proc_name> [parameter declaration]
+AS
+<sql_statements>
+```
+```SQL
+DROP PROCEDURE <proc_name>
+```
+
+<br>
+
+### Return value of SP
+- After execution a SP `returns a value`
+    - Of type INT
+    - Default return value=0
+- RETURN statement
+    - Execution of SP stops
+    - Return value can be specified
+
+```SQL 
+--- Creation of SP with explicit return value
+CREATE PROCEDURE OrderSelectAll AS
+SELECT * FROM Orders
+RETURN @@ROWCOUNT
+```
+```SQL
+--- Use of SP with return value.
+--- Result of print comes in Messages tab.
+DECLARE @numberOfOrders INT
+EXEC @numberOfOrders = OrdersSelectAll
+PRINT 'We have ' + STR(@numberOfOrders) + ' orders.'
+```
+
+### SP with parameters
+- Types of parameters
+    - A parameter is passed to the SP with an INPUT parameter
+    - With an OUTPUT you can possibly pass a value to the SP and get a value back
+
+```SQL
+CREATE PROCEDURE OrdersSelectAllForCustomers @customerID int, @numberOfOrders int OUTPUT
+AS 
+SELECT @numberOfOrders = COUNT(*)
+FROM orders
+WHERE custumerID = @customerID
+
+-- Use of a default value for the imput parameter
+CREATE PROCEDURE OrdersSelectAllForCustomer @customerID int = 5, @nubmerOfOrders int OUTPUT
+AS 
+SELECT @nubmerOfOrders = COUNT(*)
+FROM Orders
+WHERE customerID = @customerID
+```
+- Calling the SP
+    - Always provide keyword OUTPUT for output parameters
+    - 2 ways to pass actual parameters
+        - use formal parameter name (order unimportant)
+        - positional
+```sql
+-- Pass param by explicit use of formal parameters
+DECLARE @nmbrOfOrders INT
+EXECUTE OrdersSelectAllForCustomer @customerID = 5, @numberOFOrders = @nmbrOfOrders OUTPUT
+PRINT @nmberOfOrders
+
+-- Positional parameter passing
+DECLARE @nmbrOfOrders INT
+EXECUTE OrdersSelectAllForCustomer 5, @nmbrOfOrders OUTPUT
+PRINT @nmbrOfOrders
+```
+
+### Error handling in Transact SQL
+
+- `RETURN`
+    - Immediate end of execution of the batch procedure
+- `@@error`
+    - Contains error number of last executed SQL instruction
+    - Value = 0 if OK
+- `RAISERROR`
+    - Returns user definded error or system error
+- `Use of TRY ... CATCH block`
+
+### ERROR handling -> using @@error
+
+```sql
+CREATE
+PROCEDURE ProductInsert @productName nvarchar(50)=NULL, @categoryID int=NULL AS 
+DECLARE @errormsg int 
+INSERT INTO Products(ProductName,CategoryID,Discontinued)VALUES (@productName,@categoryID,0)
+--save @@error to avoid overwriting by consecutive statements
+SET @errormsg =@@error
+IF @errormsg =0
+    PRINT'SUCCESS! The product has been added.'
+ELSE IF @errormsg =515 
+    PRINT'ERROR! ProductName is NULL.'
+ELSE IF @errormsg =547 
+    PRINT'ERROR! CategoryID doesn''t exist.'
+ELSE PRINT'ERROR! Unable to add new product. Error:'+str(@errormsg)
+
+RETURN @errormsg
+--Testcode
+BEGIN TRANSACTION
+    EXEC ProductInsert 'Wokkels', 10 
+    SELECT * FROM Products WHERE productName LIKE'%Wokkels%'
+ROLLBACK;
+```
+
+- All systems error messages are in the system table sysmessages
+```SQL
+SELECT * FROM master.dbo.sysmessages WHERE error = @@ERROR
+```
+- Create your own messages using raiserror
+    - RAISERROR(msg, severity, state)
+        - msg - the error message
+        - severity - value between 0 and 18
+        - state - value between 1 and 127, to distinguish between consecutive calls with same message.
+### Error handling -> using RAISERROR
+```SQL
+CREATE
+PROCEDURE ProductInsert @productName nvarchar(50)=NULL, @categoryID int=NULL AS 
+DECLARE @errormsg int 
+INSERT INTO Products(ProductName,CategoryID,Discontinued)VALUES (@productName,@categoryID,0)
+--save @@error to avoid overwriting by consecutive statements
+SET @errormsg =@@error
+IF @errormsg =0
+    PRINT 'SUCCES! The product has been added.'
+ELSE IF @errormsg = 515
+    RAISERROR ('ProductName or CategoryID is NULL.',18,1)
+ELSE IF 
+    RAISERROR ('',18,1)
+ELSE PRINT '' +str(@errormsg)
+
+return @errormsg
+
+-- Testcode
+BEGIN TRANSACTION
+    EXEC ProductInsert 'Wokkels', 10
+    SELECT * FROM Products WHERE productName LIKE '%Wokkels%'
+ROLLBACK;
+```
+
+### Exception handling: catch-block functions
+- ERROR_LINE(): line number where exception occurred
+- ERROR_MESSAGE(): error message
+- ERROR_PROCEDURE(): SP where exception occured
+- ERROR_NUMBER(): error number
+- ERROR_SEVERITY(): severity level
+
+### Throw
+- Is an alternative to RAISERROR
+- Raises an exception and transfers execution to a CATCH block of a TRY...CATCH contstruct in SQL Server.
+- Without parameters: only in catch block (= rethrowing the caught exception)
+- With parameters: also outside catch block
+- create your own user defined exceptions
+    - THROW (error_number, message, state)
+        - error_number: represent the exception. Is an int between 50000 and 2147483647.
+        - state: value between 1 and 127, to distinguish between consectutive calls with the same message.
+
+## Functions
+
+### Why user defined functions?
+- Give the age of each employee:
+```sql
+SELECT lastname, firstname, birthdate, GETDATE() as today, DATEDIFF(YEAR,birthdate,GETDATE()) age
+FROM employees
+```
+first one will not be happy
+
+
+- Give the age of each employee:
+```sql
+SELECT lastname, firstname, birthdate, GETDATE() as today, DATEDIFF(YEAR,birthdate,GETDATE())/365 age
+FROM employees
+```
+Better but doesn't take into account leap years
+
+### Solution: user defined function
+```sql
+CREATE FUNCTION GetAge(@birthdate AS DATE,@eventdate AS DATE)
+RETURNS INT AS
+BEGIN 
+    RETURN
+    DATEDIFF(year,@birthdate,@eventdate)
+       CASE WHEN 100 *MONTH(@eventdate)+DAY(@eventdate)
+       <100 *MONTH(@birthdate)+DAY(@birthdate)
+       
+    THEN 1 ELSE 0 
+    END;
+END;
+
+--- How to use?
+SELECT lastname,firstname,birthdate,GETDATE() As today,dbo.GetAge(birthdate,GETDATE()) age
+FROM employees
+```
+
+### User defined functions 
+- Give per product category the price of the cheapest product that costs more than x $ and a product with that price.
+```SQL
+Select lastname, firstname, birthdate,GETDATE() as today, DATEDIFF(DAY,birthdate,GETDATE()) / 365 age
+FROM Employees
+```
+
+## CURSORS
+
+- `SQL statements are processing complete resultsets and not individual rows. Cursors allow to process individual rows to perform complex row specefic operations that can't (easily) be performed with a single SELECT, UPDATE or DELETE statement.`
+- A cursor is a database object that refers to the result of a query. It allows to specify the row from the resultset you wish to process.
+- 5 important cursor related statements
+    - DECLARE CURSOR - creates and defines the cursor
+    - OPEN - opens the declared cursor
+    - FETCH - fetches 1 row
+    - CLOSE - closes teh cursor (counterpart of OPEN)
+    - DEALLOCATE - remove the cursor definition
+
+<img src="IMG\Cursors.png" width=800>
+
+### Cursor declaration
+
+```sql
+DECLARE <cursor_name> [INSENSITIVE] [SCROLL] CURSOR FOR <SELECT_statement>
+[FOR {READ ONLY | UPDATE [OF <column list>]}]
+```
+- INSENSITIVE
+    - The cursor uses a temporary copy of the data
+        - Changes in underlying tables after opening the cursor are not reflected in data fetched by the cursor 
+        - The cursor can't be used to change data (read-only, see below)
+    - If INSENSITIVE is omitted, deletes and updates are refelected in the cursor
+        - -> less performant because each row fetch executes a SELECT
+- SCROLL
+    - All fetch operations are allowed 
+        - FIRST, LAST, PRIOR, NEXT, RELATIVE and ABSOLUTE
+        - Might result in difficult to understand code
+    - If SCROLL is omitted only NEXT can be used
+- READ ONLY
+    - Prohibits data changes in underlying tables through cursor 
+- UPDATE
+    - Data changes are allowed
+    - Specify columns that can be changed via the cursor
+
+### Opening a cursor
+
+```sql
+OPEN <cursor name>
+```
+- The cursor is opened
+- The cursor is "filled"
+    - The select statement is executed. A "virtual table" is filled with the "active set".
+- The cursor's current row pointer is positioned just before the first row in the result set.
+
+
+### Fetching data with a cursor
+```sql
+FETCH [NEXT | PRIOR | FIRST | LAST | {ABSOLUTE | RELATIVE <row number>}]
+FROM <cursor name>
+[INTO <variable name>[,...<last variable name>]]
+```
+- The cursor is positioned
+    - On the next (or previous, first, last,...) row
+    - Default only NEXT is allowed
+        - For other ways use a SCROLL-able cursor
+- Data is fetched
+    - without INTO clause resulting data is shown on screen
+    - with INTO clause data is assigned to the specified variables
+        - Declare a corresponding variable for each column in the cursor SELECT
+
+### Closing a cursor
+```sql
+CLOSE <cursor name>
+```
+- The cursor is closed
+    - The cursor definition remains
+    - Cursor can be reopened
+
+### Deallocating a cursor
+```sql
+DEALLOCATE <cursor name>
+```
+- The cursor definition is removed
+    - If this was the last reference to the cursor all cursor resources (the "virtual table") are released.
+    - If the cursor has not been closed yet `DEALLOCATE` wil close the cursor.
+
+### Example 1
+```SQL
+--declare cursor
+DECLARE suppliers_cursor CURSOR
+FOR 
+SELECT SupplierID, CompanyName, City
+FROM Suppliers
+WHERE Country ='USA'
+DECLARE @supplierID INT, @companyName NVARCHAR(30), @city NVARCHAR(15)
+--open cursor
+OPEN suppliers_cursor
+--fetch data
+FETCH NEXT FROM suppliers_cursor INTO @supplierID, @companyName, @city 
+
+WHILE @@FETCH_STATUS=0 
+BEGIN
+    PRINT'Supplier: '+ str(@SupplierID) + ' ' + @companyName + ' ' + @city
+    FETCH NEXT FROM suppliers_cursor INTO @supplierID, @companyName, @city
+END
+--close cursor
+CLOSE suppliers_cursor
+--deallocate cursor 
+DEALLOCATE suppliers_cursor
+```
+### Nested cursors
+
+- In real-life programs you often need to declare and use two or more cursors in the same block.
+- Often these cursors are related to each other by parameters.
+- One common example is the need for multi-level reports in which each level of the report uses rows from a different cursor.
+
+
+### Update and delete via cursors
+```sql
+DELETE FROM <table name>
+WHERE CURRENT OF <cursor name>
+
+UPDATE <table name>
+SET ...
+WHERE CURRENT OF <cursor name>
+```
+- Positioned update/delete
+    - Deletes/updates the row the cursor referred in WHERE CURRENT OF points to
+    - = cursor based positioned update/delete
+
+## TRIGGERS
+
+A `trigger`: a database program, consisting of procedural and declarative instructions, saved in the catalogue and activated by the DBMS if a certain operation on the database is executed and if a certain condition is satisfied.
+
+- Comparable to SP but `can't be called explicitly`
+    - A trigger is `automatically called by the DBMS` with some DML, DDL, LOGON-LOGOFF commands
+        - DML trigger: with an `insert, update or delete` for a table or view (in this course we further elaborate this type of cursors)
+        - DDL trigger: eecuted with a `create, alter or drop` of a table
+        - LOGON-LOGOFF trigger: executed when a user logs in or out (MS SQL Server: only LOGON triggers, Oracle: both)
+
+- DML triggers
+    - Can be executed with
+        - `insert`
+        - `update`
+        - `delete`
+    - Are activated
+        - `before` - before the IUD is processed (not supported by SQL Server)
+        - `instead of` - instead of IUD command
+        - `after` - after the IUID is processed (but before COMMIT), this is the defautl
+    - In some DMBS you can also specify how many times the cursor is activated
+        - `for each row`
+        - `for each statement`
+
