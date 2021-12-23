@@ -1315,3 +1315,185 @@ A `trigger`: a database program, consisting of procedural and declarative instru
         - `for each row`
         - `for each statement`
 
+### Procedural database objects
+
+- Procedural programs
+
+|Types| Saved as| Executrion | Supports parameters |
+|:---   |:----  |:----      |:----                  |
+|Script| separate file | client tool| no|
+|Stored Procedure| database object| via application or SQL script| yes|
+|User defined function| database object| via application or SQL script| yes|
+|Trigger| database object| via DML statement| no|
+
+### Why using triggers?
+
+- Validation of data and complex constraints
+    - An employee can't be assigned to > 10 projects
+    - An employee can only be assigned to a project that is assigned to his department
+- automatic generation of values
+    - If an employee is assigned to a project the default value for the monthly bonus is set acoording to the porject priority and his job category
+- Support for alerts
+    - Send automatci e-mail if an employee is removed from a project
+- Auditing
+    - Keep track of who did what on a certain table
+- Replication and controlled update of redundant data
+    - If an ordersdetail record changes, update the orderamount in the orders table
+    - Automatic update of datawarehouse tables for reporting (see "Datawarehousing")
+
+### Advantages
+- Major advantagse
+    - Store functionality in the DB and execute consistently with each change of data in the DB
+- Consequences
+    - no redundant code
+        - functionality is localised in a single spot, not scattered over different applications (desktop, web, mobile), written by different authors
+    - written and tested 'once' by an experienced DBA
+    - security
+        - triggers are in the DB so all security rules apply
+    - more processing power
+        - for DBMS and DB
+    - fits into clinet-server model
+        - 1 call to db-serve: al lot can be executed without further communication
+
+### Disadvantages
+
+- Complexity
+    - DB design, implementation are more complex by shifting functionality from application to DB
+    - Very difficult to debug
+- Hidden functionality
+    - The user can be confronted with unexpected side effects from the trigger, possibly unwanted
+    - Triggers can cascade, which is not always easy to predict when designing the trigger
+- Performance
+    - At each database change the triggers have to be reevaluated
+- Portability
+    - Restricted to the chosen database dialect (ex. Transact-SQL from MS)
+
+
+### Comparison of trigger functionality
+
+### "Virtual" tables with triggers
+- 2 temporary tables
+    - `deleted` table contains copies of updated and deleted rows
+        - During update or delete rows are moved from the triggering table to the `deleted` table
+        - Those two table have no rows in common
+    - `inserted` table conatains copies of updated or inserted rows
+        - During update or insert each affected row is copied from the triggering table to the `inserted` table
+        - All rows from the inserted table are also in the triggering table
+
+- `deleted` and `inserted` table
+
+<img src="IMG\VirtualTablesWithTriggers1.png" width=800>
+<img src="IMG\VirtualTablesWithTriggers2.png" width=800>
+<img src="IMG\VirtualTablesWithTriggers3.png" width=800>
+<img src="IMG\VirtualTablesWithTriggers4.png" width=800>
+
+### Creation of an after trigger
+
+```sql
+CREATE TRIGGER triggerName
+ON TABLE
+FOR [INSERT, UPDATE, DELETE]
+AS ...
+```
+- Only by SysAdmin or dbo
+- Linked to one table; not to a view
+- Is executed
+    - After execution of the triggering action, i.e. insert, update, delete
+    - After copy of the changes to the temporary tables inserted and deleted
+    - Before COMMIT
+### Delete after - Trigger
+- Triggering instruction is a delete instruction
+    - deleted - logical table with columns equal to columns of triggering table, containing a copy of delete rows
+
+```sql
+-- If a record in OrderDetails is removed => UnitsInStock in Products should be updated
+-- 1st try
+CREATE OR ALTER TRIGGER deleteOrderDetails ON OrderDetails FOR DELETE
+AS
+DECLARE @deletedProductID INT=(SELECT ProductID From deleted)
+DECLARE @deletedQuantity SmallINT=(SELECT Quantity From deleted)
+UPDATE Products 
+SET UnitsInStock = UnitsInStock + @deletedQuantity
+FROM Products 
+WHERE ProductID = @deletedProductID
+--Testcode
+BEGIN TRANSACTION
+SELECT * FROM Products WHERE ProductID =14 OR ProductID =51 
+DELETE FROM OrderDetails WHERE OrderID =10249 SELECT* FROM Products WHERE ProductID =14 OR ProductID =51 
+ROLLBACK;
+```
+```sql
+--If a record in OrderDetails is removed => UnitsInStock in Products should be updated
+--In the previous solution: more than 1 record was found in deleted 
+--=> error. Use a cursor instead to loop through all the records in deleted
+--2nd try
+CREATE OR ALTER TRIGGER deleteOrderDetails ON OrderDetails FOR delete 
+AS 
+DECLARE deleted_cursor CURSOR 
+FOR 
+SELECT ProductID,Quantity
+FROM deleted
+DECLARE @ProductID INT, @Quantity SmallINT
+--open cursor
+OPEN deleted_cursor
+--fetch data
+FETCH NEXT FROM deleted_cursor INTO @ProductID,@Quantity
+WHILE @@FETCH_STATUS=0 
+BEGIN 
+    UPDATE Products
+    SET UnitsInStock =UnitsInStock +@Quantity
+    FROM Products WHERE ProductID = @ProductID 
+    FETCH NEXT FROM deleted_cursor INTO@ProductID,@Quantity
+END
+    
+--close cursor
+CLOSE deleted_cursor
+--deallocate cursor
+DEALLOCATE deleted_cursor
+```
+### Insert after - trigger
+
+- triggering instruction is an insert statement
+    - inserted - logical table with columns equal to columns of triggering table, containing a copy of inserted rows
+```sql
+--If a new record is inserted in OrderDetails => check if the unitPrice is not too low or too high
+CREATE OR ALTER TRIGGER insert OrderDetails ON OrderDetails FOR insert 
+AS 
+DECLARE @insertedProductID INT=(SELECT ProductID From inserted)
+DECLARE @insertedUnitPrice Money=(SELECT UnitPrice From inserted) 
+DECLARE @unitPrice From Products Money=(SELECT UnitPrice FROM Products WHERE ProductID = @insertedProductID) 
+IF @insertedUnitPrice NOT BETWEEN @unitPrice From Products *0.85 AND @unitPrice From Products *1.15 
+BEGIN 
+    ROLLBACK TRANSACTION 
+    RAISERROR ('The inserted unit price can''t be correct',14,1)
+END
+--Testcode
+BEGIN TRANSACTION
+INSERT INTO OrderDetails VALUES (10249,72,60.00,10,0.15)SELECT* FROM OrderDetails WHERE OrderID =10249
+ROLLBACK
+```
+
+### Insert after - trigger
+- Triggering instruction is an insert statement
+    - Remark: when triggering by INSERT-SELECT statement more than one record can be added at once. The trigger code is executed only once, but will insert a new record for each inserted record.
+- Triggering instruction is an update statement
+```sql
+--If a record is updated in OrderDetails => check if the new unitPrice is not too low or too high
+--If so, rollback the transaction and raise an error
+CREATE OR ALTER TRIGGER updateOrderDetails ON OrderDetails FOR update 
+AS 
+DECLARE @updatedProductID INT=(SELECT ProductID From inserted)
+DECLARE @updatedUnitPrice Money=(SELECT UnitPrice From inserted) 
+DECLARE @unitPrice From Products Money=(SELECT UnitPrice FROM Products WHERE ProductID =@updatedProductID) 
+IF @updatedUnitPrice NOT BETWEEN @unitPrice From Products *0.85 AND @unitPrice From Products *1.15 
+BEGIN 
+    ROLLBACK TRANSACTION 
+    RAISERROR ('The updated unit price can''t be correct',14,1)
+END
+--Testcode 
+BEGIN TRANSACTION 
+UPDATE OrderDetails SET UnitPrice =60 WHERE OrderID =10249 AND ProductID =14 
+SELECT *FROM OrderDetails WHERE OrderID =10249 
+ROLLBACK;
+```
+
